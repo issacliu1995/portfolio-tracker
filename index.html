@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>家庭投资组合追踪</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+<style>
+:root {
+  --bg: #0c1017; --bg2: #111720; --bg3: #161d28; --card: #10161f;
+  --border: #1d2533; --gold: #d4a843; --gold2: #7a6328;
+  --green: #22b455; --red: #e5483d; --blue: #3b82f6; --blue2: #60a5fa;
+  --text: #c5cdd8; --text2: #788394; --text-bright: #edf1f5; --radius: 8px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-size: 15px; line-height: 1.7; min-height: 100vh;
+  background-image:
+    radial-gradient(ellipse at 15% 0%, rgba(212,168,67,0.03) 0%, transparent 50%),
+    radial-gradient(ellipse at 85% 100%, rgba(59,130,246,0.03) 0%, transparent 50%);
+}
+.container { max-width: 1560px; margin: 0 auto; padding: 20px 28px; }
+
+.header {
+  display: flex; justify-content: space-between; align-items: flex-end;
+  padding: 26px 0 18px; border-bottom: 1px solid var(--border); margin-bottom: 22px;
+}
+.header h1 { font-size: 26px; font-weight: 700; letter-spacing: 1px; color: var(--text-bright); }
+.header h1 span { color: var(--gold); }
+.header .sub { font-size: 14px; color: var(--text2); margin-top: 4px; }
+
+.stats-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 22px; }
+.stat {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 20px 22px; position: relative; overflow: hidden;
+}
+.stat::after { content: ''; position: absolute; top: 0; right: 0; width: 60px; height: 60px; background: radial-gradient(circle, var(--gold2) 0%, transparent 70%); opacity: 0.04; }
+.stat .l { font-size: 12px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text2); margin-bottom: 8px; font-weight: 600; }
+.stat .v { font-size: 24px; font-weight: 700; color: var(--text-bright); }
+.stat .s { font-size: 13px; color: var(--text2); margin-top: 4px; }
+.stat .up { color: var(--green); } .stat .dn { color: var(--red); }
+
+.main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 22px; }
+
+.card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 22px; }
+.card-hd {
+  padding: 14px 20px; border-bottom: 1px solid var(--border);
+  font-size: 13px; font-weight: 600; letter-spacing: 0.5px;
+  color: var(--text2); background: var(--bg3);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.card-bd { padding: 18px 20px; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th {
+  text-align: right; padding: 10px 10px; font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.8px;
+  color: var(--text2); border-bottom: 1px solid var(--border); white-space: nowrap;
+}
+th:first-child, th:nth-child(2), th:nth-child(3) { text-align: left; }
+td { padding: 9px 10px; border-bottom: 1px solid rgba(29,37,51,0.5); text-align: right; white-space: nowrap; font-size: 14px; }
+td:first-child, td:nth-child(2), td:nth-child(3) { text-align: left; }
+tr:hover td { background: rgba(212,168,67,0.03); }
+
+.section td {
+  padding: 18px 10px 6px; font-size: 11px; font-weight: 700;
+  letter-spacing: 1.2px; color: var(--gold);
+  border-bottom: 1px solid var(--gold2); text-transform: uppercase;
+  position: relative;
+}
+
+input[type="text"], input[type="number"] {
+  background: var(--bg2); border: 1px solid var(--border); color: var(--text-bright);
+  padding: 8px 10px; border-radius: 5px; font-size: 14px; font-family: inherit;
+  transition: border-color 0.15s;
+}
+input[type="number"] { width: 110px; text-align: right; }
+input[type="text"] { width: 100px; text-align: left; }
+input:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 2px rgba(212,168,67,0.1); }
+
+.tag { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+.tag-d { background: rgba(34,180,85,0.1); color: var(--green); }
+.tag-g { background: rgba(96,165,250,0.1); color: var(--blue2); }
+.tag-b { background: rgba(212,168,67,0.1); color: var(--gold); }
+
+.btn {
+  padding: 9px 20px; border-radius: 5px; font-size: 14px; font-family: inherit;
+  cursor: pointer; letter-spacing: 0.3px; transition: all 0.15s;
+  border: 1px solid var(--border); background: transparent; color: var(--text); font-weight: 500;
+}
+.btn:hover { border-color: var(--text2); }
+.btn-pri { background: var(--gold); color: #0c1017; border-color: var(--gold); font-weight: 700; font-size: 14px; }
+.btn-pri:hover { background: #deb756; }
+.btn-sm { padding: 6px 14px; font-size: 13px; }
+
+.btn-del-row {
+  border: none; background: transparent; color: transparent; cursor: pointer;
+  font-size: 16px; padding: 2px 6px; border-radius: 3px; transition: all 0.15s;
+  line-height: 1;
+}
+tr:hover .btn-del-row { color: var(--red); }
+.btn-del-row:hover { background: rgba(229,72,61,0.12); }
+
+.btn-add {
+  border: 1px dashed var(--border); background: transparent; color: var(--text2);
+  cursor: pointer; font-size: 13px; padding: 8px 20px; border-radius: 5px;
+  transition: all 0.15s; font-family: inherit; width: 100%; text-align: center;
+  margin-top: 6px;
+}
+.btn-add:hover { border-color: var(--gold); color: var(--gold); }
+
+.btn-del-month {
+  border-color: transparent; color: var(--red); font-size: 12px; padding: 2px 6px;
+  margin-left: 4px; border-radius: 3px; opacity: 0; transition: opacity 0.15s;
+  cursor: pointer; background: transparent;
+}
+.month-tab-wrap:hover .btn-del-month { opacity: 1; }
+.btn-del-month:hover { background: rgba(229,72,61,0.1); }
+
+.month-tabs { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.month-tab-wrap { display: inline-flex; align-items: center; position: relative; }
+.month-tab {
+  padding: 7px 16px; border-radius: 5px; font-size: 14px; font-weight: 500;
+  cursor: pointer; border: 1px solid var(--border); background: transparent;
+  color: var(--text); transition: all 0.15s; white-space: nowrap;
+}
+.month-tab:hover { border-color: var(--text2); }
+.month-tab.active { background: var(--gold); color: #0c1017; border-color: var(--gold); font-weight: 700; }
+.month-add {
+  padding: 7px 14px; font-size: 14px; cursor: pointer; font-weight: 500;
+  border: 1px solid var(--border); border-radius: 5px; background: transparent; color: var(--text2);
+}
+.month-add:hover { border-color: var(--gold); color: var(--gold); }
+
+.total-row td { font-weight: 700; border-top: 2px solid var(--gold2); padding: 14px 10px; font-size: 15px; }
+.total-row td:first-child { color: var(--gold); }
+
+.chart-box { width: 100%; height: 380px; }
+.footer { text-align: center; padding: 28px 0; color: var(--text2); font-size: 12px; letter-spacing: 0.5px; }
+
+/* Modal */
+.modal-overlay {
+  display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.65); z-index: 999; justify-content: center; align-items: center;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 28px 30px; width: 480px; max-width: 90vw;
+}
+.modal h3 { font-size: 18px; color: var(--text-bright); margin-bottom: 20px; }
+.modal label { display: block; font-size: 13px; color: var(--text2); margin: 12px 0 4px; font-weight: 600; }
+.modal input, .modal select {
+  width: 100%; background: var(--bg2); border: 1px solid var(--border); color: var(--text-bright);
+  padding: 10px 12px; border-radius: 5px; font-size: 14px; font-family: inherit;
+}
+.modal select { cursor: pointer; }
+.modal input:focus, .modal select:focus { outline: none; border-color: var(--gold); }
+.modal-btns { display: flex; gap: 10px; margin-top: 22px; justify-content: flex-end; }
+
+@media(max-width: 1000px) { .main-grid { grid-template-columns: 1fr; } .stats-row { grid-template-columns: repeat(3, 1fr); } }
+@media(max-width: 640px) { .stats-row { grid-template-columns: 1fr 1fr; } .container { padding: 10px 14px; } }
+</style>
+</head>
+<body>
+
+<!-- Add Position Modal -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal">
+    <h3>新增投资标的</h3>
+    <label>标的名称</label>
+    <input type="text" id="addName" placeholder="例：贵州茅台">
+    <label>代码</label>
+    <input type="text" id="addCode" placeholder="例：600519">
+    <label>类别</label>
+    <select id="addType"><option value="个股">精选个股</option><option value="ETF">指数基金</option><option value="固收">债券固收</option></select>
+    <label>风格标签</label>
+    <select id="addTag"><option value="d">防御</option><option value="g">成长</option><option value="b">平衡</option></select>
+    <label>首次投入 (元)</label>
+    <input type="number" id="addInit" value="0" step="1000">
+    <label>月定投 (元)</label>
+    <input type="number" id="addMonthly" value="2000" step="500">
+    <div class="modal-btns">
+      <button class="btn" onclick="closeModal()">取消</button>
+      <button class="btn btn-pri" onclick="doAdd()">确认添加</button>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+<div class="header">
+  <div>
+    <h1>PORTFOLIO <span>TRACKER</span></h1>
+    <div class="sub">家庭投资组合 · 月度复盘 · 数据存于本地浏览器</div>
+  </div>
+</div>
+
+<div class="stats-row" id="statsBar"></div>
+
+<div class="main-grid">
+  <div class="card">
+    <div class="card-hd">三类资产配置占比</div>
+    <div class="card-bd"><div class="chart-box" id="pieChart"></div></div>
+  </div>
+  <div class="card">
+    <div class="card-hd">市值 & 投入走势</div>
+    <div class="card-bd"><div class="chart-box" id="lineChart"></div></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-hd">
+    <span>选择复盘月份</span>
+    <div style="display:flex; gap: 8px; align-items: center;">
+      <span id="monthTabs" class="month-tabs"></span>
+      <button class="btn month-add" onclick="addMonth()" style="border-style:solid;">+ 新建月份</button>
+    </div>
+  </div>
+  <div class="card-bd table-wrap">
+    <table id="mainTable"></table>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-hd">各月收益率对比矩阵</div>
+  <div class="card-bd table-wrap">
+    <table id="historyTable"></table>
+  </div>
+</div>
+
+<div class="footer" style="display:flex;justify-content:center;align-items:center;gap:16px;flex-wrap:wrap;">
+  <span>数据存储在浏览器本地 · 可导出导入 · 仅限个人使用</span>
+  <button class="btn btn-sm" onclick="exportData()" style="border-color:var(--green);color:var(--green);">📥 导出数据</button>
+  <button class="btn btn-sm" onclick="document.getElementById('importFile').click()" style="border-color:var(--blue2);color:var(--blue2);">📤 导入数据</button>
+  <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(this)">
+</div>
+</div>
+
+<script>
+// ============ DEFAULT POSITIONS ============
+const DEFAULT_POSITIONS = [
+  { id:'000568', name:'泸州老窖', type:'个股', tag:'d' },
+  { id:'600900', name:'长江电力', type:'个股', tag:'d' },
+  { id:'601985', name:'中国核电', type:'个股', tag:'b' },
+  { id:'300124', name:'汇川技术', type:'个股', tag:'g' },
+  { id:'688008', name:'澜起科技', type:'个股', tag:'g' },
+  { id:'300308', name:'中际旭创', type:'个股', tag:'g' },
+  { id:'510300', name:'沪深300 ETF', type:'ETF', tag:'b' },
+  { id:'588000', name:'科创50 ETF', type:'ETF', tag:'g' },
+  { id:'513180', name:'恒生科技 ETF', type:'ETF', tag:'g' },
+  { id:'QQQ', name:'纳指100 QQQ', type:'ETF', tag:'g' },
+  { id:'GC007', name:'国债逆回购7天', type:'固收', tag:'d' },
+  { id:'217022', name:'招商产业债A', type:'固收', tag:'d' },
+  { id:'017704', name:'兴业同业存单AAA', type:'固收', tag:'d' },
+];
+
+const DEFAULTS = {
+  '000568':[0,2000], '600900':[40000,2000], '601985':[30000,2000],
+  '300124':[30000,1500], '688008':[25000,1500], '300308':[25000,1000],
+  '510300':[0,4000], '588000':[0,3000], '513180':[0,2500], 'QQQ':[0,2500],
+  'GC007':[0,3000], '217022':[0,3000], '017704':[0,2000],
+};
+
+// ============ STATE ============
+function defState() {
+  const positions = DEFAULT_POSITIONS.map(p => ({
+    id: p.id, name: p.name, type: p.type, tag: p.tag,
+    initial: DEFAULTS[p.id] ? DEFAULTS[p.id][0] : 0,
+    monthly: DEFAULTS[p.id] ? DEFAULTS[p.id][1] : 0,
+  }));
+  return {
+    positions: positions,
+    months: { '2026-05': { label: '2026年5月(起始)', invested:{}, value:{} } },
+    monthOrder: ['2026-05'],
+  };
+}
+
+function load() {
+  const raw = localStorage.getItem('pf_state_v5');
+  if (raw) {
+    const s = JSON.parse(raw);
+    // Migrate: ensure all positions have name/type/tag
+    s.positions = s.positions.filter(p => p.id && p.name);
+    return s;
+  }
+  return defState();
+}
+function save(s) { localStorage.setItem('pf_state_v5', JSON.stringify(s)); }
+
+let state = load();
+let currentMonth = state.monthOrder[state.monthOrder.length - 1];
+
+function fmt(n) { return n.toLocaleString('zh-CN', { maximumFractionDigits: 0 }); }
+function fmtPct(n) { return (n >= 0 ? '+' : '') + n.toFixed(2) + '%'; }
+
+function getMonths(key) {
+  const [y, m] = key.split('-').map(Number);
+  const [sy, sm] = state.monthOrder[0].split('-').map(Number);
+  return (y - sy) * 12 + (m - sm) + 1;
+}
+function monthLabel(k) { const [y, m] = k.split('-'); return y + '年' + parseInt(m) + '月'; }
+
+function computeAll(monthKey) {
+  const mdata = state.months[monthKey] || { invested: {}, value: {} };
+  const months = getMonths(monthKey);
+
+  const rows = state.positions.map(sp => {
+    const invested = (mdata.invested && mdata.invested[sp.id] !== undefined)
+      ? mdata.invested[sp.id]
+      : (sp.initial + sp.monthly * (months - 1));
+    const value = (mdata.value && mdata.value[sp.id] !== undefined)
+      ? mdata.value[sp.id]
+      : invested;
+    const pnl = value - invested;
+    const rate = invested > 0 ? (pnl / invested * 100) : 0;
+    return { ...sp, invested, value, pnl, rate };
+  });
+
+  const totalInvested = rows.reduce((s, r) => s + r.invested, 0);
+  const totalValue = rows.reduce((s, r) => s + r.value, 0);
+  const totalPnl = totalValue - totalInvested;
+  const totalRate = totalInvested > 0 ? (totalPnl / totalInvested * 100) : 0;
+  const totalMonthly = rows.reduce((s, r) => s + r.monthly, 0);
+
+  return { rows, totalInvested, totalValue, totalPnl, totalRate, totalMonthly, months };
+}
+
+function saveCurrentMonth() {
+  if (!state.months[currentMonth]) {
+    state.months[currentMonth] = { label: monthLabel(currentMonth), invested: {}, value: {} };
+  }
+  const mdata = state.months[currentMonth];
+  state.positions.forEach(sp => {
+    const invEl = document.getElementById('inv_' + sp.id);
+    const valEl = document.getElementById('val_' + sp.id);
+    const initEl = document.getElementById('init_' + sp.id);
+    const monEl = document.getElementById('mon_' + sp.id);
+    if (invEl) mdata.invested[sp.id] = parseFloat(invEl.value) || 0;
+    if (valEl) mdata.value[sp.id] = parseFloat(valEl.value) || 0;
+    if (initEl) sp.initial = parseFloat(initEl.value) || 0;
+    if (monEl) sp.monthly = parseFloat(monEl.value) || 0;
+  });
+  mdata.label = monthLabel(currentMonth);
+  save(state);
+}
+
+// ============ ADD / DELETE POSITIONS ============
+function openAddModal() {
+  document.getElementById('addModal').classList.add('show');
+  document.getElementById('addName').value = '';
+  document.getElementById('addCode').value = '';
+  document.getElementById('addInit').value = '0';
+  document.getElementById('addMonthly').value = '2000';
+  document.getElementById('addName').focus();
+}
+function closeModal() { document.getElementById('addModal').classList.remove('show'); }
+
+function doAdd() {
+  const name = document.getElementById('addName').value.trim();
+  const code = document.getElementById('addCode').value.trim();
+  const type = document.getElementById('addType').value;
+  const tag = document.getElementById('addTag').value;
+  const init = parseFloat(document.getElementById('addInit').value) || 0;
+  const monthly = parseFloat(document.getElementById('addMonthly').value) || 0;
+  if (!name) { alert('请输入标的名称'); return; }
+  const id = code || ('CUSTOM_' + Date.now());
+
+  // Check duplicate
+  if (state.positions.find(p => p.id === id)) { alert('该代码已存在'); return; }
+
+  saveCurrentMonth();
+  state.positions.push({ id, name, type, tag, initial: init, monthly });
+  // Initialize invested/value for all existing months
+  state.monthOrder.forEach(mk => {
+    if (!state.months[mk]) state.months[mk] = { label: monthLabel(mk), invested:{}, value:{} };
+  });
+  save(state);
+  closeModal();
+  renderAll(currentMonth, false);
+}
+
+function deletePosition(posId) {
+  const pos = state.positions.find(p => p.id === posId);
+  if (!pos) return;
+  if (!confirm('确定删除「' + pos.name + '」吗？所有月份的该标的数据将被清除。')) return;
+  saveCurrentMonth();
+  state.positions = state.positions.filter(p => p.id !== posId);
+  state.monthOrder.forEach(mk => {
+    if (state.months[mk]) {
+      delete state.months[mk].invested[posId];
+      delete state.months[mk].value[posId];
+    }
+  });
+  save(state);
+  renderAll(currentMonth, false);
+}
+
+// ============ RENDER ============
+function renderAll(monthKey, isSwitch) {
+  if (isSwitch) saveCurrentMonth();
+  currentMonth = monthKey;
+
+  if (!state.months[monthKey]) {
+    state.months[monthKey] = { label: monthLabel(monthKey), invested: {}, value: {} };
+  }
+  const mdata = state.months[monthKey];
+
+  // Tabs
+  let tabsHTML = '';
+  state.monthOrder.forEach(mk => {
+    const active = mk === monthKey ? ' active' : '';
+    const label = state.months[mk]?.label || monthLabel(mk);
+    tabsHTML +=
+      '<span class="month-tab-wrap">' +
+      '<button class="month-tab' + active + '" onclick="switchMonth(\'' + mk + '\')">' + label + '</button>' +
+      '<button class="btn-del-month" onclick="event.stopPropagation();deleteMonth(\'' + mk + '\')" title="删除此月份">✕</button>' +
+      '</span>';
+  });
+  document.getElementById('monthTabs').innerHTML = tabsHTML;
+
+  const data = computeAll(monthKey);
+
+  // Stats
+  document.getElementById('statsBar').innerHTML =
+    '<div class="stat"><div class="l">总市值</div><div class="v">¥' + fmt(data.totalValue) + '</div><div class="s">当前组合估值</div></div>' +
+    '<div class="stat"><div class="l">总投入</div><div class="v">¥' + fmt(data.totalInvested) + '</div><div class="s">累计投入本金</div></div>' +
+    '<div class="stat"><div class="l">总盈亏</div><div class="v ' + (data.totalPnl >= 0 ? 'up' : 'dn') + '">' + (data.totalPnl >= 0 ? '+' : '') + '¥' + fmt(data.totalPnl) + '</div><div class="s">收益率 ' + fmtPct(data.totalRate) + '</div></div>' +
+    '<div class="stat"><div class="l">本月定投</div><div class="v">¥' + fmt(data.totalMonthly) + '</div><div class="s">' + state.positions.length + ' 个标的</div></div>' +
+    '<div class="stat"><div class="l">定投月数</div><div class="v">' + data.months + '</div><div class="s">自' + state.monthOrder[0].split('-')[0] + '年' + parseInt(state.monthOrder[0].split('-')[1]) + '月起</div></div>';
+
+  // Main table
+  const typeOrder = ['个股', 'ETF', '固收'];
+  const typeLabel = { '个股': '精选个股', 'ETF': '指数基金', '固收': '债券固收' };
+
+  let html = '<thead><tr>' +
+    '<th>标的</th><th>代码</th><th>类型</th>' +
+    '<th>首次投入</th><th>月定投</th><th>已投金额</th>' +
+    '<th>当前市值</th><th>盈亏</th><th>收益率</th>' +
+    '<th style="width:30px;"></th>' +
+    '</tr></thead><tbody>';
+
+  typeOrder.forEach(typ => {
+    const typeRows = data.rows.filter(r => r.type === typ);
+    if (typeRows.length === 0) return;
+
+    html += '<tr class="section"><td colspan="10">' + typeLabel[typ] + '</td></tr>';
+
+    typeRows.forEach(r => {
+      const tagC = r.tag === 'd' ? 'tag-d' : r.tag === 'g' ? 'tag-g' : 'tag-b';
+      const tagL = r.tag === 'd' ? '防御' : r.tag === 'g' ? '成长' : '平衡';
+      const pnlC = r.pnl >= 0 ? 'var(--green)' : 'var(--red)';
+      const inv = (mdata.invested && mdata.invested[r.id] !== undefined) ? mdata.invested[r.id] : r.invested;
+      const val = (mdata.value && mdata.value[r.id] !== undefined) ? mdata.value[r.id] : r.value;
+
+      html += '<tr>' +
+        '<td><strong>' + r.name + '</strong></td>' +
+        '<td style="color:var(--text2)">' + r.id + '</td>' +
+        '<td><span class="tag ' + tagC + '">' + tagL + '</span></td>' +
+        '<td><input type="number" id="init_' + r.id + '" value="' + r.initial + '" class="w90" step="1000"></td>' +
+        '<td><input type="number" id="mon_' + r.id + '" value="' + r.monthly + '" class="w80" step="500"></td>' +
+        '<td><input type="number" id="inv_' + r.id + '" value="' + inv + '" class="w100" step="1000" onchange="onCellChange()"></td>' +
+        '<td><input type="number" id="val_' + r.id + '" value="' + val + '" class="w100" step="1000" onchange="onCellChange()"></td>' +
+        '<td style="color:' + pnlC + '" id="pnl_' + r.id + '">¥' + fmt(r.pnl) + '</td>' +
+        '<td style="color:' + pnlC + '" id="rate_' + r.id + '">' + fmtPct(r.rate) + '</td>' +
+        '<td><button class="btn-del-row" onclick="deletePosition(\'' + r.id + '\')" title="删除此标的">✕</button></td>' +
+        '</tr>';
+    });
+
+    // Add button row for this type
+    html += '<tr><td colspan="10"><button class="btn-add" onclick="quickAdd(\'' + typ + '\')">+ 添加' + typeLabel[typ] + '标的</button></td></tr>';
+  });
+
+  // Total
+  html += '<tr class="total-row">' +
+    '<td colspan="3" style="color:var(--gold);">合 计</td>' +
+    '<td></td><td></td>' +
+    '<td>¥' + fmt(data.totalInvested) + '</td>' +
+    '<td>¥' + fmt(data.totalValue) + '</td>' +
+    '<td style="color:' + (data.totalPnl >= 0 ? 'var(--green)' : 'var(--red)') + '">' + (data.totalPnl >= 0 ? '+' : '') + '¥' + fmt(data.totalPnl) + '</td>' +
+    '<td style="color:' + (data.totalPnl >= 0 ? 'var(--green)' : 'var(--red)') + '">' + fmtPct(data.totalRate) + '</td>' +
+    '<td></td>' +
+    '</tr></tbody>';
+
+  document.getElementById('mainTable').innerHTML = html;
+
+  renderHistory(data, monthKey);
+  renderPieChart(data);
+  renderLineChart();
+
+  if (!isSwitch) {
+    setTimeout(() => {
+      state.positions.forEach(sp => {
+        const invEl = document.getElementById('inv_' + sp.id);
+        const valEl = document.getElementById('val_' + sp.id);
+        if (invEl && mdata.invested && mdata.invested[sp.id] !== undefined) invEl.value = mdata.invested[sp.id];
+        if (valEl && mdata.value && mdata.value[sp.id] !== undefined) valEl.value = mdata.value[sp.id];
+      });
+    }, 100);
+  }
+}
+
+function quickAdd(type) {
+  document.getElementById('addType').value = type;
+  openAddModal();
+}
+
+function onCellChange() {
+  saveCurrentMonth();
+  const data = computeAll(currentMonth);
+  data.rows.forEach(r => {
+    const pnlEl = document.getElementById('pnl_' + r.id);
+    const rateEl = document.getElementById('rate_' + r.id);
+    if (pnlEl) { pnlEl.textContent = (r.pnl >= 0 ? '+' : '') + '¥' + fmt(r.pnl); pnlEl.style.color = r.pnl >= 0 ? 'var(--green)' : 'var(--red)'; }
+    if (rateEl) { rateEl.textContent = fmtPct(r.rate); rateEl.style.color = r.rate >= 0 ? 'var(--green)' : 'var(--red)'; }
+  });
+  document.getElementById('statsBar').innerHTML =
+    '<div class="stat"><div class="l">总市值</div><div class="v">¥' + fmt(data.totalValue) + '</div></div>' +
+    '<div class="stat"><div class="l">总投入</div><div class="v">¥' + fmt(data.totalInvested) + '</div></div>' +
+    '<div class="stat"><div class="l">总盈亏</div><div class="v ' + (data.totalPnl >= 0 ? 'up' : 'dn') + '">' + (data.totalPnl >= 0 ? '+' : '') + '¥' + fmt(data.totalPnl) + '</div><div class="s">' + fmtPct(data.totalRate) + '</div></div>' +
+    '<div class="stat"><div class="l">本月定投</div><div class="v">¥' + fmt(data.totalMonthly) + '</div></div>' +
+    '<div class="stat"><div class="l">定投月数</div><div class="v">' + data.months + '</div></div>';
+  renderPieChart(data);
+  renderHistory(data, currentMonth);
+}
+
+function switchMonth(mk) { saveCurrentMonth(); state = load(); renderAll(mk, false); }
+
+function addMonth() {
+  saveCurrentMonth();
+  const last = state.monthOrder[state.monthOrder.length - 1];
+  const [y, m] = last.split('-').map(Number);
+  let nm = m + 1, ny = y;
+  if (nm > 12) { nm = 1; ny++; }
+  const next = ny + '-' + String(nm).padStart(2, '0');
+  if (!state.monthOrder.includes(next)) {
+    state.monthOrder.push(next);
+    state.months[next] = { label: monthLabel(next), invested: {}, value: {} };
+  }
+  save(state); currentMonth = next;
+  renderAll(next, false);
+}
+
+function deleteMonth(mk) {
+  if (state.monthOrder.length <= 1) { alert('至少保留一个月份。'); return; }
+  if (!confirm('确定删除「' + (state.months[mk]?.label || monthLabel(mk)) + '」吗？')) return;
+  const idx = state.monthOrder.indexOf(mk);
+  state.monthOrder.splice(idx, 1); delete state.months[mk];
+  save(state);
+  currentMonth = state.monthOrder[Math.min(idx, state.monthOrder.length - 1)];
+  renderAll(currentMonth, false);
+}
+
+// ============ HISTORY ============
+function renderHistory(currentData, monthKey) {
+  let html = '<thead><tr>' +
+    '<th>月份</th><th>总市值</th><th>总投入</th><th>总盈亏</th><th>总收益率</th>';
+  state.positions.forEach(p => { html += '<th>' + p.name + '</th>'; });
+  html += '</tr></thead><tbody>';
+
+  state.monthOrder.forEach(mk => {
+    const md = state.months[mk]; if (!md) return;
+    const d = computeAll(mk);
+    const bold = mk === monthKey ? 'font-weight:700;background:rgba(212,168,67,0.04);' : '';
+    html += '<tr style="' + bold + '">' +
+      '<td>' + (md.label || monthLabel(mk)) + '</td>' +
+      '<td>¥' + fmt(d.totalValue) + '</td>' +
+      '<td>¥' + fmt(d.totalInvested) + '</td>' +
+      '<td style="color:' + (d.totalPnl >= 0 ? 'var(--green)' : 'var(--red)') + '">' + (d.totalPnl >= 0 ? '+' : '') + '¥' + fmt(d.totalPnl) + '</td>' +
+      '<td style="color:' + (d.totalPnl >= 0 ? 'var(--green)' : 'var(--red)') + '">' + fmtPct(d.totalRate) + '</td>';
+    d.rows.forEach(r => {
+      html += '<td style="color:' + (r.rate >= 0 ? 'var(--green)' : 'var(--red)') + '">' + fmtPct(r.rate) + '</td>';
+    });
+    html += '</tr>';
+  });
+  html += '</tbody>';
+  document.getElementById('historyTable').innerHTML = html;
+}
+
+// ============ CHARTS ============
+let pieChart, lineChart;
+
+function renderPieChart(data) {
+  if (!pieChart) pieChart = echarts.init(document.getElementById('pieChart'));
+  const byType = {};
+  data.rows.forEach(r => {
+    const t = r.type === '个股' ? '精选个股' : r.type === 'ETF' ? '指数基金' : '债券固收';
+    if (!byType[t]) byType[t] = 0;
+    byType[t] += r.value;
+  });
+  const cd = Object.entries(byType).map(([k, v]) => ({ name: k, value: Math.round(v) }));
+  pieChart.setOption({
+    tooltip: { formatter: p => p.name + ': ¥' + fmt(p.value) + ' (' + p.percent + '%)' },
+    series: [{
+      type: 'pie', radius: ['48%', '75%'], center: ['50%', '50%'],
+      itemStyle: { borderRadius: 5, borderColor: '#0c1017', borderWidth: 3 },
+      label: { color: '#c5cdd8', fontSize: 13, formatter: '{b}\n{d}%' },
+      data: cd, color: ['#d4a843', '#3b82f6', '#22b455'],
+    }]
+  });
+}
+
+function renderLineChart() {
+  if (!lineChart) lineChart = echarts.init(document.getElementById('lineChart'));
+  const months = state.monthOrder.map(mk => state.months[mk]?.label || monthLabel(mk));
+  const values = state.monthOrder.map(mk => Math.round(computeAll(mk).totalValue));
+  const invested = state.monthOrder.map(mk => Math.round(computeAll(mk).totalInvested));
+  lineChart.setOption({
+    tooltip: { trigger: 'axis', formatter: function(params) { let s = params[0].axisValue + '<br/>'; params.forEach(function(p) { s += p.marker + ' ' + p.seriesName + ': ¥' + fmt(p.value) + '<br/>'; }); return s; } },
+    legend: { data: ['持仓市值', '累计投入'], textStyle: { color: '#c5cdd8', fontSize: 13 }, top: 0 },
+    grid: { left: 70, right: 24, top: 44, bottom: 28 },
+    xAxis: { type: 'category', data: months, axisLine: { lineStyle: { color: '#1d2533' } }, axisLabel: { color: '#788394', fontSize: 12 } },
+    yAxis: { type: 'value', axisLabel: { color: '#788394', fontSize: 12, formatter: function(v) { return '¥' + (v / 10000).toFixed(0) + '万'; } }, splitLine: { lineStyle: { color: '#1d2533' } } },
+    series: [
+      { name: '持仓市值', type: 'line', data: values, smooth: true, lineStyle: { color: '#d4a843', width: 2.5 }, itemStyle: { color: '#d4a843' }, symbol: 'circle', symbolSize: 7 },
+      { name: '累计投入', type: 'line', data: invested, smooth: true, lineStyle: { color: '#3b82f6', width: 2, type: 'dashed' }, itemStyle: { color: '#3b82f6' }, symbol: 'diamond', symbolSize: 6 },
+    ]
+  });
+}
+
+window.addEventListener('load', function() { renderAll(currentMonth, false); });
+window.addEventListener('resize', function() { if (pieChart) pieChart.resize(); if (lineChart) lineChart.resize(); });
+// ============ EXPORT / IMPORT ============
+function exportData() {
+  saveCurrentMonth();
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = '投资组合数据_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click(); URL.revokeObjectURL(url);
+}
+function importData(input) {
+  const file = input.files[0]; if (!file) return;
+  if (!confirm('导入将覆盖当前所有数据，确定继续吗？')) { input.value = ''; return; }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (!imported.positions || !imported.monthOrder) throw new Error('格式不符');
+      saveCurrentMonth(); state = imported; save(state);
+      currentMonth = state.monthOrder[state.monthOrder.length - 1];
+      renderAll(currentMonth, false);
+      alert('导入成功！已加载 ' + state.positions.length + ' 个标的、' + state.monthOrder.length + ' 个月份的数据。');
+    } catch(err) { alert('文件格式错误，请选择导出的 .json 文件'); }
+  };
+  reader.readAsText(file); input.value = '';
+}
+// Close modal on overlay click
+document.addEventListener('click', function(e) { if (e.target.id === 'addModal') closeModal(); });
+</script>
+</body>
+</html>
