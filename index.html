@@ -189,7 +189,20 @@ tr:hover .btn-del-row { color: var(--red); }
   </div>
 </div>
 
-<div class="container">
+<!-- Password Gate -->
+<div id="pwGate" style="position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);z-index:9999;display:flex;justify-content:center;align-items:center;flex-direction:column;">
+  <div style="text-align:center;">
+    <div style="font-size:48px;margin-bottom:16px;">🔒</div>
+    <h2 style="color:var(--text-bright);font-family:Georgia,serif;font-size:22px;margin-bottom:8px;">PORTFOLIO TRACKER</h2>
+    <p style="color:var(--text2);font-size:13px;margin-bottom:24px;">请输入访问密码</p>
+    <input type="password" id="pwInput" placeholder="密码" style="background:var(--bg2);border:1px solid var(--border);color:var(--text-bright);padding:12px 18px;border-radius:6px;font-size:16px;width:240px;text-align:center;font-family:inherit;" onkeydown="if(event.key==='Enter')checkPw()">
+    <br><br>
+    <button class="btn btn-pri" onclick="checkPw()" style="padding:10px 40px;font-size:15px;">进入</button>
+    <p id="pwError" style="color:var(--red);font-size:12px;margin-top:12px;display:none;">密码错误</p>
+  </div>
+</div>
+
+<div class="container" id="mainApp" style="display:none;">
 
 <div class="header">
   <div>
@@ -622,6 +635,24 @@ function renderLineChart() {
 
 window.addEventListener('load', function() { renderAll(currentMonth, false); });
 window.addEventListener('resize', function() { if (pieChart) pieChart.resize(); if (lineChart) lineChart.resize(); });
+// ============ PASSWORD GATE ============
+const PW_HASH = '7dce034e548b1e319664a6f0d28c30d61f3c5fb9765b76aa8c73bd5e391302fc';
+function checkPw() {
+  const input = document.getElementById('pwInput').value;
+  if (!input) return;
+  const hash = sha256(input);
+  if (hash === PW_HASH) {
+    document.getElementById('pwGate').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'block';
+    sessionStorage.setItem('pw_ok', '1');
+    if (pieChart) pieChart.resize(); if (lineChart) lineChart.resize();
+  } else {
+    document.getElementById('pwError').style.display = 'block';
+  }
+}
+function sha256(m){function R(n,c){return(n>>>c)|(n<<(32-c));}function B(n,c){return n>>>c;}function F(n,c,d){return(n&c)|(~n&d);}function G(n,c,d){return(n&c)|(n&d)|(c&d);}function H(n){return R(n,2)^R(n,13)^R(n,22);}function I(n){return R(n,6)^R(n,11)^R(n,25);}function J(n){return R(n,7)^R(n,18)^B(n,3);}function K(n){return R(n,17)^R(n,19)^B(n,10);}var k=[1116352408,1899447441,3049323471,3921009573,961987163,1508970993,2453635748,2870763221,3624381080,310598401,607225278,1426881987,1925078388,2162078206,2614888103,3248222580,3835390401,4022224774,264347078,604807628,770255983,1249150122,1555081692,1996064986,2554220882,2821834349,2952996808,3210313671,3336571891,3584528711,113926993,338241895,666307205,773529912,1294757372,1396182291,1695183700,1986661051,2177026350,2456956037,2730485921,2820302411,3259730800,3345764771,3516065817,3600352804,4094571909,275423344,430227734,506948616,659060556,883997877,958139571,1322822218,1537002063,1747873779,1955562222,2024104815,2227730452,2361852424,2428436474,2756734187,3204031479,3329325298];var h=[1779033703,3144134277,1013904242,2773480762,1359893119,2600822924,528734635,1541459225];var w=new Uint8Array(new TextEncoder().encode(m));var l=w.length;var b=l*8;var t=[];for(var i=0;i<l;i++)t[i>>2]|=w[i]<<(24-(i%4)*8);t[l>>2]|=0x80<<(24-(l%4)*8);t[((l+8>>6)+1)*16-1]=b;var T=t.length;for(var o=0;o<T;o+=16){var W=h.slice();for(var i=0;i<64;i++){var s=i<16?t[o+i]:(K(t[o+i-2])+t[o+i-7]+J(t[o+i-15])+t[o+i-16])|0;if(i>=16)t[o+i]=s;var S=(I(W[4])+G(W[4],W[5],W[6]))|0;var ch=(W[7]+S+k[i]+s)|0;var t1=(H(W[0])+F(W[0],W[1],W[2]))|0;W=[(ch+t1)|0,W[0],W[1],W[2],(W[3]+ch)|0,W[4],W[5],W[6]];h[0]=(h[0]+W[0])|0;h[1]=(h[1]+W[1])|0;h[2]=(h[2]+W[2])|0;h[3]=(h[3]+W[3])|0;h[4]=(h[4]+W[4])|0;h[5]=(h[5]+W[5])|0;h[6]=(h[6]+W[6])|0;h[7]=(h[7]+W[7])|0;}}return h.map(function(v){return('0000000'+(v>>>0).toString(16)).slice(-8);}).join('');}
+(function(){if(sessionStorage.getItem('pw_ok')==='1'){document.getElementById('pwGate').style.display='none';document.getElementById('mainApp').style.display='block';}})();
+
 // ============ EXPORT / IMPORT ============
 function exportData() {
   saveCurrentMonth();
