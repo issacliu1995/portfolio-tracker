@@ -80,6 +80,17 @@ input[type="number"] { width: 110px; text-align: right; }
 input[type="text"] { width: 100px; text-align: left; }
 input:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 2px rgba(212,168,67,0.1); }
 
+/* Lock state */
+body.locked input[type="number"]:not(#pwInput),
+body.locked input[type="text"],
+body.locked select { pointer-events: none; opacity: 0.55; }
+body.locked .btn-del-row, body.locked .btn-del-month { display: none; }
+body.locked .btn-add { display: none; }
+body.locked .btn-pri { pointer-events: none; opacity: 0.4; }
+body.locked .month-add { display: none; }
+body.locked .month-tab { pointer-events: auto; }
+#lockBtn { transition: all 0.2s; }
+
 .tag { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; }
 .tag-d { background: rgba(34,180,85,0.1); color: var(--green); }
 .tag-g { background: rgba(96,165,250,0.1); color: var(--blue2); }
@@ -209,6 +220,7 @@ tr:hover .btn-del-row { color: var(--red); }
     <h1>PORTFOLIO <span>TRACKER</span></h1>
     <div class="sub">家庭投资组合 · 月度复盘 · 数据存于本地浏览器</div>
   </div>
+  <button id="lockBtn" class="btn" onclick="toggleLock()" style="font-size:20px;padding:8px 16px;" title="切换编辑锁定">🔒</button>
 </div>
 
 <div class="stats-row" id="statsBar"></div>
@@ -632,6 +644,22 @@ function renderLineChart() {
     ]
   });
 }
+
+function toggleLock() {
+  document.body.classList.toggle('locked');
+  const locked = document.body.classList.contains('locked');
+  const btn = document.getElementById('lockBtn');
+  btn.textContent = locked ? '🔒' : '🔓';
+  btn.className = 'btn' + (locked ? ' locked' : '');
+  sessionStorage.setItem('pf_locked', locked ? '1' : '0');
+}
+(function initLock() {
+  if (sessionStorage.getItem('pf_locked') === '1') {
+    document.body.classList.add('locked');
+    const btn = document.getElementById('lockBtn');
+    if (btn) { btn.textContent = '🔒'; btn.className = 'btn locked'; }
+  }
+})();
 
 window.addEventListener('load', function() { renderAll(currentMonth, false); });
 window.addEventListener('resize', function() { if (pieChart) pieChart.resize(); if (lineChart) lineChart.resize(); });
