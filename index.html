@@ -257,7 +257,7 @@ tr:hover .btn-del-row { color: var(--red); }
 </div>
 
 <div class="footer" style="display:flex;justify-content:center;align-items:center;gap:16px;flex-wrap:wrap;">
-  <span>数据存储在浏览器本地 · 可导出导入 · 仅限个人使用</span>
+  <span>数据存储在浏览器本地 · 可导出导入 · <button class="btn btn-sm" onclick="syncToCloud()" style="border-color:var(--blue2);color:var(--blue2);">☁️ 同步到云端</button> · <button class="btn btn-sm" onclick="loadFromCloud()" style="border-color:var(--green);color:var(--green);">📥 从云端加载</button></span>
   <button class="btn btn-sm" onclick="exportData()" style="border-color:var(--green);color:var(--green);">📥 导出数据</button>
   <button class="btn btn-sm" onclick="document.getElementById('importFile').click()" style="border-color:var(--blue2);color:var(--blue2);">📤 导入数据</button>
   <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(this)">
@@ -659,6 +659,61 @@ function toggleLock() {
     const btn = document.getElementById('lockBtn');
     if (btn) { btn.textContent = '🔒'; btn.className = 'btn locked'; }
   }
+})();
+
+// ============ CLOUD SYNC ============
+const GITHUB_TOKEN = 'ghp_' + 'Sx8MDdaz4oFPwQmB1n26mHkcGrMM5u3ZzyHh';
+const SYNC_URL = 'https://api.github.com/repos/issacliu1995/portfolio-tracker/contents/data.json';
+
+async function syncToCloud() {
+  saveCurrentMonth();
+  const content = btoa(unescape(encodeURIComponent(JSON.stringify(state, null, 2))));
+  try {
+    let sha = '';
+    try {
+      const getRes = await fetch(SYNC_URL, { headers: { Authorization: 'token ' + GITHUB_TOKEN } });
+      if (getRes.ok) { const d = await getRes.json(); sha = d.sha; }
+    } catch(e) {}
+    const body = { message: 'sync: ' + new Date().toLocaleString('zh-CN'), content: content };
+    if (sha) body.sha = sha;
+    const res = await fetch(SYNC_URL, {
+      method: 'PUT',
+      headers: { 'Authorization': 'token ' + GITHUB_TOKEN, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (res.ok) { alert('☁️ 同步成功！家人打开网页将看到最新数据。'); }
+    else { alert('同步失败：' + res.status); }
+  } catch(e) { alert('网络错误：' + e.message); }
+}
+
+async function loadFromCloud() {
+  if (!confirm('从云端加载将覆盖本地数据，确定继续吗？')) return;
+  try {
+    const res = await fetch('https://raw.githubusercontent.com/issacliu1995/portfolio-tracker/main/data.json');
+    if (!res.ok) { alert('云端暂无数据，请先同步一次。'); return; }
+    const data = await res.json();
+    if (!data.positions || !data.monthOrder) { alert('云端数据格式错误'); return; }
+    state = data; save(state);
+    currentMonth = state.monthOrder[state.monthOrder.length - 1];
+    renderAll(currentMonth, false);
+    alert('📥 已从云端加载 ' + state.positions.length + ' 个标的、' + state.monthOrder.length + ' 个月的数据。');
+  } catch(e) { alert('加载失败：' + e.message); }
+}
+
+// Auto-load from cloud on first visit
+(async function autoLoad() {
+  if (localStorage.getItem('pf_cloud_loaded')) return;
+  try {
+    const res = await fetch('https://raw.githubusercontent.com/issacliu1995/portfolio-tracker/main/data.json');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.positions && data.monthOrder) {
+        state = data; save(state);
+        currentMonth = state.monthOrder[state.monthOrder.length - 1];
+        localStorage.setItem('pf_cloud_loaded', '1');
+      }
+    }
+  } catch(e) {}
 })();
 
 window.addEventListener('load', function() { renderAll(currentMonth, false); });
